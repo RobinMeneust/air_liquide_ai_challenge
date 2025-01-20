@@ -1,0 +1,11 @@
+[project]
+dynamic = ["dependencies"]
+name = "electricity_price_forecast"
+version = "0.0.1"
+authors = [
+  {name = "Maxime Cabrit"},
+  {name = "Robin Meneust"},
+  {name = "Ethan Pinto"},
+]
+description = "Predict electricity price (forecast)"
+readme = "README.md"

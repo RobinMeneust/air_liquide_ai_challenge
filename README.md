@@ -3,3 +3,5 @@
 ## Install
 
 `conda env create -f environment.yaml`
+
+`pip install -e .`

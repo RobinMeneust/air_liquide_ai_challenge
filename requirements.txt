@@ -11,6 +11,8 @@ pyarrow
 matplotlib
 scikit-learn==1.5.2
 tqdm
+optuna
+jupyter
 
 # model for time-series prediction
 xgboost==2.1.3
