@@ -2,6 +2,8 @@
 torch
 torchvision
 torchaudio
+torchtune
+torchao
 
 pandas
 numpy
