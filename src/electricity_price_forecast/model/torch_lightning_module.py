@@ -7,7 +7,7 @@ class TorchLightningModule(pl.LightningModule):
         super().__init__()
         self.lr = lr
         self.model = model_class(**model_params).to(device)
-        self.loss_function = nn.MSELoss()
+        self.loss_function = nn.L1Loss()
         
         self.save_hyperparameters()
     

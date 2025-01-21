@@ -6,6 +6,7 @@ class DatasetWithWindow(Dataset):
     def __init__(self, df, window_size, window_step, horizon, x_keys, y_key, device="cuda"):
         self.X = torch.tensor(df[x_keys].values, dtype=torch.float32).to(device)
         self.y = torch.tensor(df[y_key].values, dtype=torch.float32).unsqueeze(-1).to(device)
+        self._dates = df.index.values
                 
         if type(x_keys) != type([]) or len(x_keys) == 1:
             self.X = self.X.unsqueeze(-1)
@@ -31,12 +32,14 @@ class DatasetWithWindow(Dataset):
         target = self.y[end_window:end_horizon]
         return window, target
     
-    def get_ground_truth(self, start, end):
-        if end > len(self.X) or start < 0:
-            raise IndexError("Index out of range")
-        
-        hours = np.arange(start, end)
-        prices = self.y[start:end].cpu().numpy().flatten()
-        
-        return hours, prices
-        
+    def get_last_window_idx(self):
+        return self.__len__() * self.window_step
+
+    def get_dates(self):
+        return self._dates
+    
+    def get_X(self):
+        return self.X
+    
+    def get_y(self):
+        return self.y
