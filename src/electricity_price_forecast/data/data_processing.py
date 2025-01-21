@@ -1,3 +1,6 @@
+import torch
+from torch.utils.data import Subset
+from sklearn.preprocessing import MinMaxScaler
 import os
 import zipfile
 import pandas as pd
@@ -48,3 +51,83 @@ def init_extraction(path: str = 'CYTECH_AirLiquide.zip'):
     df_hist = df_synth.pop('hourly_day_ahead_prices_2017_2020.parquet')
     df_synth = process_synthetic_files(df_synth)
     return df_synth, df_hist
+
+# Alternative versions to be merged (WARNING: used by some notebooks):
+
+def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
+    reference_date = pd.to_datetime(start_date)
+    new_df = df.copy()
+    new_df['dayofweek'] = new_df.index.dayofweek
+    new_df['hourofday'] = new_df.index.hour
+    new_df['dayofyear'] = new_df.index.dayofyear
+    new_df['dayofseries'] = (new_df.index - reference_date).days
+    new_df['dayofmonth'] = new_df.index.day  
+    new_df['month'] = new_df.index.month
+    new_df['year'] = new_df.index.year
+    return new_df
+
+def preprocess_synthetic_data(df, start_date="2016-12-31 00:00:00+00:00"):
+    new_df = transform_synthetic_data_optimized(df, start_date)
+    return preprocess_true_data(new_df, start_date)
+
+
+class DataNormalizer():
+    def __init__(self):
+        self._scalers = {}
+       
+    def transform_df(self, df, columns=None):
+        new_df = df.copy()
+        if columns is None:
+            columns = new_df.columns
+        
+        for column_name in columns:
+            self._scalers[column_name] = MinMaxScaler()
+            new_df[column_name] = self._scalers[column_name].fit_transform(new_df[[column_name]])
+        
+        return new_df
+    
+    def inverse_transform_numpy(self, numpy_data, column_name):
+        if column_name not in self._scalers:
+           raise ValueError("Unknown column name or uninitialized scaler (transform_df needs to be run before)")
+        return self._scalers[column_name].inverse_transform(numpy_data)
+    
+    
+def get_splits(dataset, test_size, val_ratio):
+    train_split_size = len(dataset) - test_size
+
+    val_split_size = int(train_split_size * val_ratio)
+    train_split_size -= val_split_size
+
+    test_start_idx = train_split_size + val_split_size
+
+    train_indices = range(train_split_size)
+    val_indices = range(train_split_size, test_start_idx)
+    test_indices = range(test_start_idx, len(dataset))
+
+    train_split = Subset(dataset, train_indices)
+    
+    if val_ratio == 0:
+        val_split = None
+    else:
+        val_split = Subset(dataset, val_indices)
+    
+    if test_size == 0:
+        test_split = None
+    else:
+        test_split = Subset(dataset, test_indices)
+    
+    return train_split, val_split, test_split
+
+
+def get_predict_data(test_split: Subset, n_before: int):
+    test_indices = test_split.indices
+    last_window_start_idx = test_split.dataset.get_last_window_idx(test_indices)
+    start = last_window_start_idx - n_before
+        
+    predict_dates = test_split.dataset.get_dates(test_indices)[start:]
+    predict_y = test_split.dataset.get_y(test_indices)[start:]
+    if type(predict_y) == torch.Tensor:
+        predict_y = predict_y.cpu().numpy()
+    predict_x = test_split.dataset.get_X(test_indices)[start:]
+    
+    return predict_dates, predict_y, predict_x
