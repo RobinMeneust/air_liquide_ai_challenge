@@ -7,7 +7,7 @@ class DatasetWithWindow(Dataset):
         self.X = torch.tensor(df[x_keys].values, dtype=torch.float32).to(device)
         self.y = torch.tensor(df[y_key].values, dtype=torch.float32).unsqueeze(-1).to(device)
                 
-        if len(x_keys) == 1:
+        if type(x_keys) != type([]) or len(x_keys) == 1:
             self.X = self.X.unsqueeze(-1)
                         
         self.window_size = window_size
