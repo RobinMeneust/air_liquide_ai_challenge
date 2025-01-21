@@ -37,9 +37,9 @@ def process_synthetic_files(data_frames, start_date='2016-12-31 23:00:00+00:00')
             processed_data[file_name] = df
     return processed_data
 
-def init_extraction():
+def init_extraction(path: str = 'CYTECH_AirLiquide.zip'):
     # Chemin vers le fichier ZIP et le dossier d'extraction
-    zip_file_path = 'CYTECH_AirLiquide.zip'
+    zip_file_path = path
     extracted_folder = 'data'
 
     # Étapes principales
