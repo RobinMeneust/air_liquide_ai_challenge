@@ -1,7 +1,9 @@
-# --extra-index-url https://download.pytorch.org/whl/cu124 # change if needed
-# torch
-# torchvision
-# torchaudio
+--extra-index-url https://download.pytorch.org/whl/cu124 # change if needed
+torch
+torchvision
+torchaudio
+torchtune
+torchao
 
 pandas
 numpy==1.22.1
@@ -9,9 +11,10 @@ pyarrow
 matplotlib
 scikit-learn==1.5.2
 tqdm
+optuna
 jupyter
-# Cython
-# pystan # for prophet
+lightning
+jupyter
 cmdstanpy # for prophet
 holidays==0.24 # for prophet
 plotly # for prophet
