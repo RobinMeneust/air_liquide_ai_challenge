@@ -64,6 +64,7 @@ def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
     new_df['dayofmonth'] = new_df.index.day  
     new_df['month'] = new_df.index.month
     new_df['year'] = new_df.index.year
+    new_df['hourofseries'] = new_df['dayofseries'] * 24 + new_df['hourofday']
     return new_df
 
 def preprocess_synthetic_data(df, start_date="2016-12-31 00:00:00+00:00"):

@@ -18,6 +18,7 @@ jupyter
 cmdstanpy # for prophet
 holidays==0.24 # for prophet
 plotly # for prophet
+transformers
 
 # model for time-series prediction
 xgboost==2.1.3
