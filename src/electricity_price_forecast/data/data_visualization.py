@@ -9,9 +9,9 @@ def plot_prices(dfs: List, labels=None, title='Electricity Price Evolution', xla
     plt.figure(figsize=(15,5))
     for i, df in enumerate(dfs):
         if labels:
-            plt.plot(df.index, df["price"], label=labels[i])
+            plt.plot(df["date"], df["price"], label=labels[i])
         else:
-            plt.plot(df.index, df["price"])
+            plt.plot(df["date"], df["price"])
             
     plt.title(title)
     plt.xlabel(xlabel)
@@ -21,7 +21,7 @@ def plot_prices(dfs: List, labels=None, title='Electricity Price Evolution', xla
     plt.show()
     
     
-def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None):
+def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None, save_path=False):
     n_before = len(y_true) - len(predictions)
     
     if data_normalizer:
@@ -35,9 +35,7 @@ def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None)
     
         # We add at beginning of predictions the last ground_truth values to have a continuous plot
         predictions = np.insert(predictions, 0, y_true[n_before-1], axis=0)
-    
-    print(n_before, len(y_true), len(predictions))
-    
+        
     plt.figure(figsize=(12,5))
     plt.plot(x_dates, y_true, color = 'r', label="True", marker='o')
     plt.plot(x_pred, predictions, color = 'b', label="Prediction", marker='x', linestyle='--')
@@ -46,5 +44,8 @@ def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None)
     plt.ylabel('Price')
     plt.legend()
     plt.gca().xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter("%Y-%m-%d\n%H h"))
-
-    plt.show()
+    
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()

@@ -12,7 +12,7 @@ class DatasetWithWindow(Dataset):
         else:
             self.X = np.array(df[x_keys].values)
             self.y = np.array(df[y_key].values).reshape(-1, 1)
-        self._dates = df.index.values
+        self._dates = df["date"].values
         
         self.window_size = window_size
         self.window_step = window_step
