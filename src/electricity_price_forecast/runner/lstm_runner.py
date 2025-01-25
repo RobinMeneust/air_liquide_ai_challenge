@@ -61,9 +61,5 @@ if __name__ == "__main__":
         {'lr': 0.04576315047600192, 'hidden_dim': 30, 'n_layers': 8} # with synthetic data & with normalization
     ]
 
-    # params = [
-    #     {'lr': 0.05, 'hidden_dim': 50, 'n_layers': 8},
-    # ] * 4
-
     # params = None
     LSTMRunner().run_all(params)

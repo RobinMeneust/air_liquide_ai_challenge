@@ -35,7 +35,7 @@ class DatasetWithWindow(Dataset):
         return window, target
     
     def get_last_window_idx(self, indices):
-        return len(indices) - self.window_size - self.horizon
+        return len(indices) - self.window_size - self.horizon, len(indices) - self.horizon - 1
 
     def get_dates(self, indices):
         return self._dates[indices]
@@ -45,3 +45,11 @@ class DatasetWithWindow(Dataset):
     
     def get_y(self, indices):
         return self.y[indices]
+
+    def windowIndicesToPointIndices(self, window_indices):
+        new_indices = []
+        for window_idx in window_indices:
+            start = window_idx * self.window_step
+            new_indices += list(range(start, start + self.window_size + self.horizon))
+        
+        return np.unique(new_indices)

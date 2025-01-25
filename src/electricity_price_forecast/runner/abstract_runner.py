@@ -18,13 +18,12 @@ class AbstractRunner(ABC):
         self._model_name = model_name
         self._val_ratio = 0.2
         self._tested_horizons = [6, 12, 24, 48, 72, 168]
-        self._window_size = 1000
+        self._window_size = 72
         self._window_step = 24
-        self._print_n_before = 10
-        self._features = ["dayofweek", "hourofday", "dayofmonth", "month", "year", "price"]
-        self._test_size = self._tested_horizons[-1] + self._window_size + self._print_n_before  # to have enough data to predict the last horizon (168 h)
+        self._features = ["dayofweek", "hourofday", "month", "price"]
+        self._test_size = self._tested_horizons[-1] + self._window_size  # to have enough data to predict the last horizon (168 h)
         self._n_trials_params_search = 5
-        self._max_synthetic_data_fetched = 5
+        self._max_synthetic_data_fetched = 20
         
         current_file_path = os.path.abspath(__file__)
         root_path = current_file_path.split("src")[0]
@@ -110,7 +109,6 @@ class AbstractRunner(ABC):
         if use_synthetic_data:
             data_path = os.path.join(self._data_root_path, "scenarios synthetiques")
             synthetic_data = self.load_synthetic_data(data_path, max_num_fetched=self._max_synthetic_data_fetched, data_normalizer=data_normalizer, initial_df=true_data)
-            
         
         for i, horizon in enumerate(self._tested_horizons):
             print(f"Step {i+1}/{len(self._tested_horizons)}...")
@@ -129,18 +127,22 @@ class AbstractRunner(ABC):
                 # overwrite train and val but keep thee true data for the test
                 train_split, val_split, _ = get_splits(synthetic_dataset, self._test_size, self._val_ratio)
 
-            predict_dates, predict_y, predict_x = get_predict_data(test_split, n_before=self._print_n_before)        
+            predict_dates, predict_y, predict_x = get_predict_data(test_split)
+            
+            
+            print(f"len predict_dates: {len(predict_dates)}, len predict_y: {len(predict_y)}, len predict_x: {len(predict_x)}")       
             
             datamodule = Datamodule(train_split, val_split, test_split, batch_size=32)
                         
             best_params = params if params else self.get_best_params(datamodule, horizon, n_trials=self._n_trials_params_search)
-            model, train_results = self.train_model(datamodule, horizon, n_epochs=30, early_stopping=False, **best_params)
+            model, train_results = self.train_model(datamodule, horizon, n_epochs=50, early_stopping=True, **best_params)
             
             test_dataloader = datamodule.test_dataloader()
             test_results = self.eval_model(model, test_dataloader)
 
-            # add dim before for batch for x[:n_before] for the batch
+            # add dim before (for batch)
             predictions = self.predict(model, predict_x.unsqueeze(0), device="cuda")
+            
             # take last window ([-1, :])
             predictions = predictions.cpu().numpy()[-1, :]
             

@@ -23,22 +23,27 @@ def plot_prices(dfs: List, labels=None, title='Electricity Price Evolution', xla
     
 def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None, save_path=False):
     n_before = len(y_true) - len(predictions)
+    if n_before <= 0:
+        raise ValueError("Number of true values must be greater than number of predictions")
     
     if data_normalizer:
         y_true = data_normalizer.inverse_transform_numpy(y_true.reshape(-1, 1), "price")
         predictions = data_normalizer.inverse_transform_numpy(predictions.reshape(-1, 1), "price")
     
-    x_pred = x_dates
+
+    x_before = x_dates[:n_before]
+    x_after = x_dates[n_before-1:]
     
-    if n_before >= 1:
-        x_pred = x_pred[n_before-1:]
-    
-        # We add at beginning of predictions the last ground_truth values to have a continuous plot
-        predictions = np.insert(predictions, 0, y_true[n_before-1], axis=0)
+    y_before = y_true[:n_before]
+    y_true = y_true[n_before-1:]
+
+    # We add at beginning of predictions the last ground_truth values to have a continuous plot
+    predictions = np.insert(predictions, 0, y_true[0], axis=0)
         
     plt.figure(figsize=(12,5))
-    plt.plot(x_dates, y_true, color = 'r', label="True", marker='o')
-    plt.plot(x_pred, predictions, color = 'b', label="Prediction", marker='x', linestyle='--')
+    plt.plot(x_before, y_before, color = 'black', label="History")
+    plt.plot(x_after, y_true, color = 'g', label="True")
+    plt.plot(x_after, predictions, color = 'r', label="Prediction", linestyle='--')
     plt.title('Real and Predicted Prices')
     plt.xlabel('Time')
     plt.ylabel('Price')

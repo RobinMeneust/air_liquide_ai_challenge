@@ -82,6 +82,7 @@ class DataNormalizer():
         new_df = df.copy()
         if columns is None:
             columns = new_df.columns
+            columns = columns.drop('date') # date should not be normalized
         
         for column_name in columns:
             self._scalers[column_name] = MinMaxScaler()
@@ -122,15 +123,16 @@ def get_splits(dataset, test_size, val_ratio):
     return train_split, val_split, test_split
 
 
-def get_predict_data(test_split: Subset, n_before: int):
+def get_predict_data(test_split: Subset):
     test_indices = test_split.indices
-    last_window_start_idx = test_split.dataset.get_last_window_idx(test_indices)
-    start = last_window_start_idx - n_before
+    test_indices = test_split.dataset.windowIndicesToPointIndices(test_indices)
+    last_window_start_idx, last_window_end_idx = test_split.dataset.get_last_window_idx(test_indices)
+    last_window_end_idx += 1 # include the last index but in slice it is exclusive
         
-    predict_dates = test_split.dataset.get_dates(test_indices)[start:]
-    predict_y = test_split.dataset.get_y(test_indices)[start:]
+    predict_dates = test_split.dataset.get_dates(test_indices)[last_window_start_idx:]
+    predict_y = test_split.dataset.get_y(test_indices)[last_window_start_idx:]
     if type(predict_y) == torch.Tensor:
         predict_y = predict_y.cpu().numpy()
-    predict_x = test_split.dataset.get_X(test_indices)[start:]
-    
+    predict_x = test_split.dataset.get_X(test_indices)[last_window_start_idx:last_window_end_idx]
+        
     return predict_dates, predict_y, predict_x
