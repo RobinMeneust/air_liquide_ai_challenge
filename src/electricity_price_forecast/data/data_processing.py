@@ -92,7 +92,7 @@ class DataNormalizer():
     
     def inverse_transform_numpy(self, numpy_data, column_name):
         if column_name not in self._scalers:
-           raise ValueError("Unknown column name or uninitialized scaler (transform_df needs to be run before)")
+           raise ValueError("Unknown column name or uninitialized scaler (transform_df needs to be run before)")       
         return self._scalers[column_name].inverse_transform(numpy_data)
     
     

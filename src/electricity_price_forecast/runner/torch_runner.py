@@ -1,5 +1,4 @@
 import os
-import os
 import pandas as pd
 from tqdm import tqdm
 import torch
@@ -7,42 +6,21 @@ from electricity_price_forecast.data.dataset import DatasetWithWindow
 from electricity_price_forecast.model.torch_lightning_module import TorchLightningModule
 from electricity_price_forecast.data.datamodule import Datamodule
 from electricity_price_forecast.data.data_visualization import plot_predictions_vs_real
-import logging
-from electricity_price_forecast.data.data_processing import preprocess_true_data, preprocess_synthetic_data, DataNormalizer, get_predict_data, get_splits
-from abc import ABC, abstractmethod
+from electricity_price_forecast.data.data_processing import DataNormalizer, get_predict_data, get_splits
+from abc import abstractmethod
 from copy import copy
+from electricity_price_forecast.runner.abstract_runner import AbstractRunner
 
 
-class TorchRunner(ABC):
+class TorchRunner(AbstractRunner):
     def __init__(self, model_name: str):
-        logging.getLogger("lightning.pytorch").setLevel(logging.WARNING)
-        
-        self._model_name = model_name
+        super().__init__(model_name)
         self._val_ratio = 0.2
-        self._tested_horizons = [6, 12, 24, 48, 72, 168]
-        self._window_size = 72
-        self._window_step = 24
         self._features = ["dayofweek", "hourofday", "month", "price"]
         self._test_size = self._tested_horizons[-1] + self._window_size  # to have enough data to predict the last horizon (168 h)
         self._n_trials_params_search = 5
         self._max_synthetic_data_fetched = 20 # a 1:20 factor of data augmentation is already a lot
-        
-        current_file_path = os.path.abspath(__file__)
-        root_path = current_file_path.split("src")[0]
-        current_date = pd.Timestamp.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self._data_root_path = os.path.join(root_path, "data")
-        self._save_path_root = os.path.join(root_path, "results", model_name, current_date)
-        
-        os.makedirs(self._save_path_root, exist_ok=True)
 
-    def load_true_data(self, data_normalizer: DataNormalizer=None):
-        data_path = os.path.join(self._data_root_path, "donnees historiques", "prix", "hourly_day_ahead_prices_2017_2020.parquet")
-        df_price = pd.read_parquet(data_path)
-        preprocessed_df = preprocess_true_data(df_price)
-        
-        if data_normalizer is None:
-            return preprocessed_df
-        return data_normalizer.transform_df(preprocessed_df)
 
     @abstractmethod
     def get_best_params(self, datamodule, horizon, n_trials=50):
@@ -77,43 +55,17 @@ class TorchRunner(ABC):
             y_pred = model(x)
         
         return y_pred   
-    
-    def load_synthetic_data(self, path, max_num_fetched=None, data_normalizer=None, initial_df=None):
-        if max_num_fetched is not None and max_num_fetched < 0:
-            max_num_fetched = None
-        train_all = []
         
-        i = 0
-        for filename in tqdm(os.listdir(path)):
-            if max_num_fetched is not None and i >= max_num_fetched:
-                break
-            i += 1
-            if filename.endswith(".parquet"):
-                current_df = pd.read_parquet(path + filename)
-                current_df = preprocess_synthetic_data(current_df)
-                                
-                train_all.append(current_df)
-                
-        if initial_df is not None:
-            train_all.append(initial_df) # must be at the end (test is at the end)
-        
-
-        train_all = pd.concat(train_all)
-        
-        if data_normalizer is not None:
-            train_all = data_normalizer.transform_df(train_all)
-        
-        return train_all
-        
-    def run(self, model_name, use_synthetic_data=False, data_normalizer=None, params=None):
+    def run(self, use_synthetic_data=False, data_normalizer=None, params=None):
         all_results = {}
-        true_data = self.load_true_data(data_normalizer)
+        true_data = self.load_true_data()
         synthetic_data = None
         if use_synthetic_data:
-            data_path = os.path.join(self._data_root_path, "scenarios synthetiques")
-            synthetic_data = self.load_synthetic_data(data_path, max_num_fetched=self._max_synthetic_data_fetched, data_normalizer=data_normalizer, initial_df=true_data)
+            data_path = os.path.join(self._data_root_path, "scenarios synthetiques", "prix")
+            synthetic_data = self.load_synthetic_data(data_path, max_num_fetched=self._max_synthetic_data_fetched, data_normalizer=data_normalizer, initial_df=self.load_true_data()[-self._test_size:])
+        true_data = data_normalizer.transform_df(true_data) if data_normalizer else true_data
         
-        save_file_prefix = f"{model_name}{'_synthetic' if use_synthetic_data else ''}{'_normalized' if data_normalizer else ''}_{self._window_size}_w_{self._window_step}_s"
+        save_file_prefix = f"{self._model_name}{'_synthetic' if use_synthetic_data else ''}{'_normalized' if data_normalizer else ''}_{self._window_size}_w_{self._window_step}_s"
         
         for i, horizon in enumerate(self._tested_horizons):
             print(f"Step {i+1}/{len(self._tested_horizons)}...")
@@ -130,9 +82,6 @@ class TorchRunner(ABC):
                 train_split, val_split, _ = get_splits(synthetic_dataset, self._test_size, self._val_ratio)
 
             predict_dates, predict_y, predict_x = get_predict_data(test_split)
-            
-            
-            print(f"len predict_dates: {len(predict_dates)}, len predict_y: {len(predict_y)}, len predict_x: {len(predict_x)}")       
             
             datamodule = Datamodule(train_split, val_split, test_split, batch_size=32)
                         
@@ -173,9 +122,9 @@ class TorchRunner(ABC):
             params = [None]*4
             print("Params must be a list of 4 elements or a dict. So it will be reset to None and found using grid search instead.")
         
-        self.run(self._model_name, use_synthetic_data=False, params=params[0])
-        self.run(self._model_name, use_synthetic_data=True, params=params[1])
+        self.run(use_synthetic_data=False, params=params[0])
+        self.run(use_synthetic_data=True, params=params[1])
         
-        self.run(self._model_name, use_synthetic_data=False, data_normalizer=DataNormalizer(), params=params[2])
-        self.run(self._model_name, use_synthetic_data=True, data_normalizer=DataNormalizer(), params=params[3])
+        # self.run(use_synthetic_data=False, data_normalizer=DataNormalizer(), params=params[2])
+        # self.run(use_synthetic_data=True, data_normalizer=DataNormalizer(), params=params[3])
         
