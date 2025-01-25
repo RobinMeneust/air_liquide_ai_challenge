@@ -1,14 +1,12 @@
 import optuna
 import lightning.pytorch as pl
-from electricity_price_forecast.model.lstm_model import LSTMModel
 from electricity_price_forecast.model.torch_lightning_module import TorchLightningModule
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-from electricity_price_forecast.model.lstm_model import MULTI_STEP
-from electricity_price_forecast.runner.abstract_runner import AbstractRunner
+from electricity_price_forecast.runner.torch_runner import TorchRunner
 from electricity_price_forecast.model.transformers_model import TransformersModel
 
 
-class LSTMRunner(AbstractRunner):
+class LSTMRunner(TorchRunner):
     def __init__(self):
         super().__init__('transformers')
         

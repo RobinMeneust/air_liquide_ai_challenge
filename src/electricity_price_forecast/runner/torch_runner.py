@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from copy import copy
 
 
-class AbstractRunner(ABC):
+class TorchRunner(ABC):
     def __init__(self, model_name: str):
         logging.getLogger("lightning.pytorch").setLevel(logging.WARNING)
         

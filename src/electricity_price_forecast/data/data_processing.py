@@ -52,7 +52,7 @@ def init_extraction(path: str = 'CYTECH_AirLiquide.zip'):
     df_synth = process_synthetic_files(df_synth)
     return df_synth, df_hist
 
-# Alternative versions to be merged (WARNING: used by some notebooks):
+# Alternative versions used by some notebooks:
 
 def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
     reference_date = pd.to_datetime(start_date)
@@ -65,7 +65,7 @@ def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
     new_df['dayofmonth'] = new_df.index.day  
     new_df['month'] = new_df.index.month
     new_df['year'] = new_df.index.year
-    new_df['hourofseries'] = new_df['dayofseries'] * 24 + new_df['hourofday']
+    new_df['hourofseries'] = new_df['dayofseries'] * 24 + new_df['hourofday'] - (new_df.index[0].hour - reference_date.hour) # starts at 0
     new_df.reset_index(drop=True, inplace=True)    
     return new_df
 
