@@ -10,6 +10,8 @@ from electricity_price_forecast.data.data_visualization import plot_predictions_
 import logging
 from electricity_price_forecast.data.data_processing import preprocess_true_data, preprocess_synthetic_data, DataNormalizer, get_predict_data, get_splits
 from abc import ABC, abstractmethod
+from copy import copy
+
 
 class AbstractRunner(ABC):
     def __init__(self, model_name: str):
@@ -23,7 +25,7 @@ class AbstractRunner(ABC):
         self._features = ["dayofweek", "hourofday", "month", "price"]
         self._test_size = self._tested_horizons[-1] + self._window_size  # to have enough data to predict the last horizon (168 h)
         self._n_trials_params_search = 5
-        self._max_synthetic_data_fetched = 20
+        self._max_synthetic_data_fetched = 20 # a 1:20 factor of data augmentation is already a lot
         
         current_file_path = os.path.abspath(__file__)
         root_path = current_file_path.split("src")[0]
@@ -104,11 +106,14 @@ class AbstractRunner(ABC):
         return train_all
         
     def run(self, model_name, use_synthetic_data=False, data_normalizer=None, params=None):
+        all_results = {}
         true_data = self.load_true_data(data_normalizer)
         synthetic_data = None
         if use_synthetic_data:
             data_path = os.path.join(self._data_root_path, "scenarios synthetiques")
             synthetic_data = self.load_synthetic_data(data_path, max_num_fetched=self._max_synthetic_data_fetched, data_normalizer=data_normalizer, initial_df=true_data)
+        
+        save_file_prefix = f"{model_name}{'_synthetic' if use_synthetic_data else ''}{'_normalized' if data_normalizer else ''}_{self._window_size}_w_{self._window_step}_s"
         
         for i, horizon in enumerate(self._tested_horizons):
             print(f"Step {i+1}/{len(self._tested_horizons)}...")
@@ -116,10 +121,7 @@ class AbstractRunner(ABC):
             true_dataset = DatasetWithWindow(true_data, self._window_size, self._window_step, horizon, self._features, "price")
             train_split, val_split, test_split = get_splits(true_dataset, self._test_size, self._val_ratio)
             
-            save_file_prefix = f"{model_name}{'_synthetic' if use_synthetic_data else ''}{'_normalized' if data_normalizer else ''}_{horizon}_h_{self._window_size}_w_{self._window_step}_s"
-            
-            save_plot_path_file = os.path.join(self._save_path_root, f"{save_file_prefix}.png")
-            save_csv_path_file = os.path.join(self._save_path_root, f"{save_file_prefix}.csv")
+            save_plot_path_file = os.path.join(self._save_path_root, f"{save_file_prefix}_{horizon}_h.png")
               
             if use_synthetic_data:                
                 synthetic_dataset = DatasetWithWindow(synthetic_data, self._window_size, self._window_step, horizon, self._features, "price") if use_synthetic_data else None
@@ -152,8 +154,18 @@ class AbstractRunner(ABC):
             for k, v in test_results.items():
                 results[f"test_{k}"] = v
                 
-            results_df = pd.DataFrame(results, index=[0])
-            results_df.to_csv(save_csv_path_file, index=False)
+            all_results[horizon] = results
+        
+        save_csv_path_file = os.path.join(self._save_path_root, f"{save_file_prefix}.csv")
+        
+        results_df = []
+        for horizon, res_dict in all_results.items():
+            temp = copy(res_dict)
+            temp["horizon"] = horizon
+            results_df.append(temp)
+        
+        results_df = pd.DataFrame(results_df)
+        results_df.to_csv(save_csv_path_file, index=False)
         print("Done")
             
     def run_all(self, params=None):
