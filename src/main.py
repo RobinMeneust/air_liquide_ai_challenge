@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from src.extract_data import init_extraction
+from electricity_price_forecast.data.data_processing import init_extraction
 
 # Afficher une série temporelle graphiquement et sauvegarder en .png
 def plot_time_series(data_frame, title, file_name, start_date=None, end_date=None):

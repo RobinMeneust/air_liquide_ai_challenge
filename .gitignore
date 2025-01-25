@@ -169,5 +169,5 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-src/data/*
+data/*
+notebooks/backup/*
