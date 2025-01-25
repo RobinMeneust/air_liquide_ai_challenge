@@ -4,12 +4,34 @@ import torch
 from enum import Enum
 
 class MULTI_STEP(Enum):
+    """Enum for the different multi-step strategies.
+    REPEAT: Repeat the model output as input (step by step). However the date is not updated (e.g. day+1) so we didn't actually used it
+    ALL_AT_ONCE: Predict all the steps at once.
+    ENCODER_DECODER: Use an encoder-decoder architecture.
+    """
     REPEAT = 0
     ALL_AT_ONCE = 1
     ENCODER_DECODER = 2
 
 class LSTMModel(nn.Module):
+    """LSTM model for forecasting
+    
+    Attributes:
+        _output_dim (int): Output dimension
+        _multi_step (MULTI_STEP): Multi-step strategy
+        _lstm (nn.LSTM): LSTM layer
+        _linear (nn.Linear): Linear layer
+    """
     def __init__(self, input_dim, output_dim=1, hidden_dim=32, n_layers=1, multi_step: MULTI_STEP = MULTI_STEP.ALL_AT_ONCE):
+        """Initialize the LSTM model
+        
+        Args:
+            input_dim (int): Input dimension
+            output_dim (int): Output dimension
+            hidden_dim (int): Hidden dimension
+            n_layers (int): Number of layers
+            multi_step (MULTI_STEP): Multi-step strategy
+        """
         super().__init__()
         
         self._output_dim = output_dim
@@ -40,6 +62,14 @@ class LSTMModel(nn.Module):
         
         
     def forward(self, x):
+        """Forward pass
+        
+        Args:
+            x (torch.Tensor): Input data
+        
+        Returns:
+            torch.Tensor: Output data
+        """
         if self._multi_step == MULTI_STEP.ALL_AT_ONCE:
             x, _ = self._lstm(x)
             x = self._linear(x[:, -1, :]) # x[:, -1, :] : shape (batch_size, seq_len, output_dim) -> (batch_size, output_dim)

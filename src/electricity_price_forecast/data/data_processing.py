@@ -55,6 +55,15 @@ def init_extraction(path: str = 'CYTECH_AirLiquide.zip'):
 # Alternative versions used by some notebooks:
 
 def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
+    """Preprocess the true (historic) data by adding new columns to the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing the true data.
+        start_date (str): Start date of the data.
+        
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame
+    """
     reference_date = pd.to_datetime(start_date)
     new_df = df.copy()
     new_df['date'] = new_df.index
@@ -70,15 +79,36 @@ def preprocess_true_data(df, start_date="2016-12-31 00:00:00+00:00"):
     return new_df
 
 def preprocess_synthetic_data(df, start_date="2016-12-31 00:00:00+00:00"):
+    """Preprocess the synthetic data by adding new columns to the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing the synthetic data.
+        start_date (str): Start date of the data.
+    
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame
+    """
     new_df = transform_synthetic_data_optimized(df, start_date)
     return preprocess_true_data(new_df, start_date)
 
 
 class DataNormalizer():
+    """Class to normalize the data using MinMaxScalers
+    
+    Attributes:
+        _scalers (dict): Dictionary containing the scalers for each column
+    """
     def __init__(self):
+        """Initialize the DataNormalizer object"""
         self._scalers = {}
        
     def transform_df(self, df, columns=None):
+        """Normalize a dataframe
+        
+        Args:
+            df (pd.DataFrame): DataFrame to normalize
+            columns (list): List of columns to normalize. If None, all columns are normalized. 'date' column is excluded
+        """
         new_df = df.copy()
         if columns is None:
             columns = new_df.columns
@@ -91,12 +121,31 @@ class DataNormalizer():
         return new_df
     
     def inverse_transform_numpy(self, numpy_data, column_name):
+        """Inverse transform a numpy array (values of only one column)
+        
+        Args:
+            numpy_data (np.ndarray): Numpy array to inverse transform
+            column_name (str): Name of the column to inverse transform
+            
+        Returns:
+            np.ndarray: Inverse transformed numpy array
+        """
         if column_name not in self._scalers:
            raise ValueError("Unknown column name or uninitialized scaler (transform_df needs to be run before)")       
         return self._scalers[column_name].inverse_transform(numpy_data)
     
     
 def get_splits(dataset, test_size, val_ratio):
+    """Get the train, validation and test splits
+    
+    Args:
+        dataset (torch.utils.data.Dataset): Dataset to split
+        test_size (int): Size of the test set
+        val_ratio (float): Ratio of the validation set
+        
+    Returns:
+        tuple: Tuple containing the train, validation and test splits
+    """
     train_split_size = len(dataset) - test_size
 
     val_split_size = int(train_split_size * val_ratio)
@@ -124,6 +173,14 @@ def get_splits(dataset, test_size, val_ratio):
 
 
 def get_predict_data(test_split: Subset):
+    """Get the data to predict (used for plots)
+    
+    Args:
+        test_split (Subset): Test split
+    
+    Returns:
+        tuple: Tuple containing the dates, y values and X values to predict    
+    """
     test_indices = test_split.indices
     test_indices = test_split.dataset.windowIndicesToPointIndices(test_indices)
     last_window_start_idx, last_window_end_idx = test_split.dataset.get_last_window_idx(test_indices)

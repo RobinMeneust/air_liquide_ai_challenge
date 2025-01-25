@@ -8,10 +8,26 @@ from electricity_price_forecast.runner.torch_runner import TorchRunner
 
 
 class LSTMRunner(TorchRunner):
+    """Runner for the LSTM model
+    
+    Attributes:
+        model_name (str): Model name
+    """
     def __init__(self):
+        """Initialize the LSTMRunner"""
         super().__init__('lstm')
         
     def get_best_params(self, datamodule, horizon, n_trials=50):
+        """Get the best parameters for the LSTM model
+        
+        Args:
+            datamodule (Datamodule): Datamodule
+            horizon (int): Horizon
+            n_trials (int): Number of trials
+        
+        Returns:
+            dict: Best parameters
+        """
         study = optuna.create_study(direction="minimize")
         study.optimize(lambda trial: self.train_model(
             datamodule,
@@ -24,6 +40,21 @@ class LSTMRunner(TorchRunner):
         return study.best_params
     
     def train_model(self, datamodule, horizon, early_stopping=True, lr=0.001, n_epochs=50, hidden_dim=32, n_layers=1, device="cuda"):
+        """Train the LSTM model
+        
+        Args:
+            datamodule (Datamodule): Datamodule
+            horizon (int): Horizon (number of points to forecast)
+            early_stopping (bool): Whether to use early stopping
+            lr (float): Learning rate
+            n_epochs (int): Number of epochs
+            hidden_dim (int): Hidden dimension
+            n_layers (int): Number of layers
+            device (str): Device
+        
+        Returns:
+            Tuple[nn.Module, dict]: Trained model and metrics
+        """
         train_dataloader = datamodule.train_dataloader()
         X_batch, _ = next(iter(train_dataloader))
         input_dim = X_batch.shape[-1]

@@ -13,7 +13,21 @@ from electricity_price_forecast.runner.abstract_runner import AbstractRunner
 
 
 class TorchRunner(AbstractRunner):
+    """Abstract runner class for PyTorch models
+    
+    Attributes:
+        _val_ratio (float): Validation ratio
+        _features (list): List of features
+        _test_size (int): Size of the test set
+        _n_trials_params_search (int): Number of trials for the parameters search
+        _max_synthetic_data_fetched (int): Maximum number of synthetic data fetched
+    """
     def __init__(self, model_name: str):
+        """Initialize the TorchRunner object
+        
+        Args:
+            model_name (str): Name of the model
+        """
         super().__init__(model_name)
         self._val_ratio = 0.2
         self._features = ["dayofweek", "hourofday", "month", "price"]
@@ -24,13 +38,48 @@ class TorchRunner(AbstractRunner):
 
     @abstractmethod
     def get_best_params(self, datamodule, horizon, n_trials=50):
+        """Get the best parameters for the model
+        
+        Args:
+            datamodule (Datamodule): Datamodule
+            horizon (int): Horizon
+            n_trials (int): Number of trials
+        
+        Returns:
+            dict: Best parameters
+        """
         pass
 
     @abstractmethod
     def train_model(self, datamodule, horizon, early_stopping=True, lr=0.001, n_epochs=50, hidden_dim=32, n_layers=1, device="cuda"):
+        """Train the model
+        
+        Args:
+            datamodule (Datamodule): Datamodule
+            horizon (int): Horizon
+            early_stopping (bool): Whether to use early stopping
+            lr (float): Learning rate
+            n_epochs (int): Number of epochs
+            hidden_dim (int): Hidden dimension
+            n_layers (int): Number of layers
+            device (str): Device
+        
+        Returns:
+            Tuple[nn.Module, dict]: Trained model and metrics
+        """
         pass
 
     def eval_model(self, model, dataloader, device="cuda"):
+        """Evaluate the model
+        
+        Args:
+            model (nn.Module): Model
+            dataloader (DataLoader): DataLoader
+            device (str): Device
+        
+        Returns:
+            dict: Metrics
+        """
         predictions = []
         ground_truth = []
         model.eval()
@@ -47,6 +96,16 @@ class TorchRunner(AbstractRunner):
         return TorchLightningModule.get_test_metrics(predictions, ground_truth)
 
     def predict(self, model, x, device="cuda"):
+        """Predict the output
+        
+        Args:
+            model (nn.Module): Model
+            x (torch.Tensor): Input data
+            device (str): Device
+        
+        Returns:
+            torch.Tensor: Predictions
+        """
         model.eval()
         model.to(device)
         y_pred = None
@@ -57,6 +116,13 @@ class TorchRunner(AbstractRunner):
         return y_pred   
         
     def run(self, use_synthetic_data=False, data_normalizer=None, params=None):
+        """Run a test of the model (on multiple horizons)
+        
+        Args:
+            use_synthetic_data (bool): Whether to use synthetic data
+            data_normalizer (DataNormalizer): DataNormalizer object to normalize the data
+            params (dict): Parameters for the model
+        """
         all_results = {}
         true_data = self.load_true_data()
         synthetic_data = None
@@ -118,6 +184,11 @@ class TorchRunner(AbstractRunner):
         print("Done")
             
     def run_all(self, params=None):
+        """Run the model on all configurations
+        
+        Args:
+            params (list): List of parameters for the model (one for each configuration)
+        """
         if type(params) is not list or len(params) != 4:
             params = [None]*4
             print("Params must be a list of 4 elements or a dict. So it will be reset to None and found using grid search instead.")

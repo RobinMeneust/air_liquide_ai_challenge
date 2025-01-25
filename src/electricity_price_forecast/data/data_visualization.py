@@ -3,6 +3,15 @@ import matplotlib.pyplot as plt
 from typing import List
 
 def plot_prices(dfs: List, labels=None, title='Electricity Price Evolution', xlabel='Time (day)', ylabel='Price'):
+    """Plot the prices of the dataframes
+    
+    Args:
+        dfs (List): List of dataframes to plot
+        labels (List): List of labels for each dataframe (either None or same length as dfs)
+        title (str): Title of the plot
+        xlabel (str): Label of the x-axis
+        ylabel (str): Label of the y-axis
+    """
     if labels is not None and len(dfs) != len(labels):
         raise ValueError("Number of labels must match number of dataframes if provided")
     
@@ -22,6 +31,15 @@ def plot_prices(dfs: List, labels=None, title='Electricity Price Evolution', xla
     
     
 def plot_predictions_vs_real(x_dates, y_true, predictions, data_normalizer=None, save_path=False):
+    """Plot the real and predicted prices. This fucntion expects len(y_true) > len(predictions)
+    
+    Args:
+        x_dates (np.ndarray): Dates that appear on the plot (for history and predictions)
+        y_true (np.ndarray): True prices (for history and predictions)
+        predictions (np.ndarray): Predicted prices)
+        data_normalizer (DataNormalizer): DataNormalizer object to inverse transform the data
+        save_path (str): Path to save the plot (if None, the plot is displayed)
+    """
     n_before = len(y_true) - len(predictions)
     if n_before <= 0:
         raise ValueError("Number of true values must be greater than number of predictions")

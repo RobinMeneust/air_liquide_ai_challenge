@@ -12,17 +12,46 @@ from typing import List
 
 
 class XGBoostRunner(AbstractRunner):
+    """Runner class for the XGBoost model
+    
+    Attributes:
+        _n_print_before (int): Number of points to print before the prediction
+        _features_by_point (list): List of features to use point by point
+    """
     def __init__(self):
+        """Initialize the XGBoostRunner"""
         super().__init__('xgboost')
         self._n_print_before = self._window_size
         self._features_by_point = ["dayofweek", "hourofday", "dayofseries"]
         
     def get_x_y_point_by_point(self, df, x_keys: List[str], y_key: str):
+        """Get the X and y data point by point
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing the data
+            x_keys (list): List of keys for the input data
+            y_key (str): Key for the target data
+        
+        Returns:
+            tuple: Tuple containing the input and target data
+        """
         X = df[x_keys]
         y = df[y_key]
         return X, y
     
     def get_x_y_window(self, df, y_key: str, window_size: int, window_step: int, horizon: int):
+        """Get the X and y data using a sliding window (get windows)
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing the data
+            y_key (str): Key for the target data
+            window_size (int): Size of the window
+            window_step (int): Step of the window
+            horizon (int): Horizon of the forecast
+        
+        Returns:
+            tuple: Tuple containing the input and target data (as windows)
+        """
         X, y  = [], []
 
         for i in range(0, len(df[y_key]) - window_size - horizon, window_step):
@@ -32,17 +61,45 @@ class XGBoostRunner(AbstractRunner):
         return X, y
     
     def split_data(self, df, test_size):
+        """Split the data into train and test sets
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing the data
+            test_size (int): Size of the test set
+        
+        Returns:
+            tuple: Tuple containing the train and test sets
+        """
         train_df = df[:-test_size]
         test_df = df[-test_size:]
         return train_df, test_df
         
     def get_best_params(self, X_train, y_train):
+        """Get the best parameters for the model
+        
+        Args:
+            X_train (pd.DataFrame): Training input data
+            y_train (pd.Series): Training target data
+        
+        Returns:
+            dict: Dictionary containing the best parameters
+        """
         xgb_model = xgb.XGBRegressor()
         reg_cv = GridSearchCV(xgb_model, {'max_depth': [1,5,10], 'n_estimators': [50, 200, 500], 'learning_rate': [0.001, 0.01, 0.1]}, verbose=1)
         reg_cv.fit(X_train, y_train)
         return reg_cv.best_params_
         
     def train_model(self, X_train, y_train, params=None):
+        """Train the model
+        
+        Args:
+            X_train (pd.DataFrame): Training input data
+            y_train (pd.Series): Training target data
+            params (dict): Parameters for the model
+        
+        Returns:
+            xgb.XGBRegressor: Trained model
+        """
         if params is None:
             xgb_model = xgb.XGBRegressor()
         else:
@@ -52,6 +109,13 @@ class XGBoostRunner(AbstractRunner):
         return xgb_model
     
     def run(self, use_synthetic_data=False, use_window=False, params=None):
+        """Run the XGBoost model
+        
+        Args:
+            use_synthetic_data (bool): Whether to use synthetic data or only historical data
+            use_window (bool): Whether to use the window mode (sliding window or points by points)
+            params (dict): Parameters        
+        """
         all_results = {}
         true_data = self.load_true_data()
         
@@ -123,6 +187,11 @@ class XGBoostRunner(AbstractRunner):
         print("Done")
     
     def run_all(self, params=None):
+        """Run the XGBoost model for all the configurations
+        
+        Args:
+            params (list): List of parameters (one for each configuration)
+        """
         if type(params) is not list or len(params) != 4:
             params = [None]*4
             print("Params must be a list of 4 elements or a dict. So it will be reset to None and found using grid search instead.")

@@ -7,7 +7,23 @@ from abc import ABC, abstractmethod
 
 
 class AbstractRunner(ABC):
+    """Abstract class for the electricity price forecast task
+    
+    Attributes:
+        _max_synthetic_data_fetched (int): Maximum number of synthetic data fetched
+        _model_name (str): Name of the model
+        _tested_horizons (list): List of tested horizons
+        _window_size (int): Size of the window
+        _window_step (int): Step of the window
+        _data_root_path (str): Path to the data root
+        _save_path_root (str): Path to the save root
+    """
     def __init__(self, model_name: str):
+        """Initialize the AbstractRunner object
+        
+        Args:
+            model_name (str): Name of the model
+        """
         logging.getLogger("lightning.pytorch").setLevel(logging.WARNING)
         self._max_synthetic_data_fetched = 10 # a 1:10 factor of data augmentation is already a lot
         self._model_name = model_name
@@ -25,6 +41,14 @@ class AbstractRunner(ABC):
         os.makedirs(self._save_path_root, exist_ok=True)
 
     def load_true_data(self, data_normalizer: DataNormalizer=None):
+        """Load the true data
+        
+        Args:
+            data_normalizer (DataNormalizer): DataNormalizer object to normalize the data
+        
+        Returns:
+            pd.DataFrame: Preprocessed DataFrame
+        """
         data_path = os.path.join(self._data_root_path, "donnees historiques", "prix", "hourly_day_ahead_prices_2017_2020.parquet")
         df_price = pd.read_parquet(data_path)
         preprocessed_df = preprocess_true_data(df_price)
@@ -35,13 +59,47 @@ class AbstractRunner(ABC):
 
     @abstractmethod
     def get_best_params(self, datamodule, horizon, n_trials=50):
+        """Get the best parameters for the model
+        
+        Args:
+            datamodule (DataModule): DataModule object
+            horizon (int): Horizon of the forecast
+            n_trials (int): Number of trials for the optimization
+        Returns:
+            dict: Dictionary containing the best parameters
+        """
         pass
 
     @abstractmethod
     def train_model(self, datamodule, horizon, early_stopping=True, lr=0.001, n_epochs=50, hidden_dim=32, n_layers=1, device="cuda"):
+        """Train the model
+        
+        Args:
+            datamodule (DataModule): DataModule object
+            horizon (int): Horizon of the forecast (number of points to forecast)
+            early_stopping (bool): Whether to use early stopping
+            lr (float): Learning rate
+            n_epochs (int): Number of epochs
+            hidden_dim (int): Hidden dimension
+            n_layers (int): Number of layers
+            device (str): Device to use
+        
+        Returns:
+            nn.Module: Trained model
+        """
         pass
     
     def load_synthetic_data(self, path, max_num_fetched=None, data_normalizer=None, initial_df=None):
+        """Load the synthetic data
+        
+        Args:
+            path (str): Path to the synthetic data
+            max_num_fetched (int): Maximum number of files fetched
+            data_normalizer (DataNormalizer): DataNormalizer object to normalize the data
+        
+        Returns:
+            pd.DataFrame: Preprocessed DataFrame
+        """
         if max_num_fetched is not None and max_num_fetched < 0:
             max_num_fetched = None
         train_all = []
@@ -71,5 +129,10 @@ class AbstractRunner(ABC):
     
     @abstractmethod
     def run_all(self, params=None):
+        """Run all tests of a model
+        
+        Args:
+            params (dict): Parameters for the model
+        """
         pass
         
